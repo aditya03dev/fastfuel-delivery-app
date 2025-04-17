@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -19,7 +18,6 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Form schema with validation
 const formSchema = z.object({
   pumpName: z.string().min(3, {
     message: "Pump name must be at least 3 characters.",
@@ -56,7 +54,6 @@ export function AdminSignupForm() {
   const { refreshSession } = useAuth();
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
 
-  // Create form with validation schema
   const form = useForm<AdminSignupFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -71,12 +68,10 @@ export function AdminSignupForm() {
     },
   });
 
-  // Handle form submission with Supabase auth
   async function onSubmit(values: AdminSignupFormValues) {
     setIsLoading(true);
     
     try {
-      // Step 1: Check if pump name or admin username already exists
       const { data: existingPump, error: checkError } = await supabase
         .from('pump_profiles')
         .select('pump_name, admin_username')
@@ -94,13 +89,12 @@ export function AdminSignupForm() {
         }
       }
 
-      // Step 2: Sign up with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
         options: {
           data: {
-            is_admin: true, // Mark as admin
+            is_admin: true,
           }
         }
       });
@@ -111,10 +105,8 @@ export function AdminSignupForm() {
         throw new Error("Admin registration failed");
       }
 
-      // Get the session right after signup to have proper authorization
       await refreshSession();
 
-      // Step 3: Create pump profile with explicit user ID to satisfy RLS
       const { error: profileError } = await supabase.from('pump_profiles').insert({
         id: authData.user.id,
         pump_name: values.pumpName,
@@ -129,25 +121,20 @@ export function AdminSignupForm() {
         throw new Error("Failed to create pump profile: " + profileError.message);
       }
       
-      // Show success toast
       toast.success("Petrol pump registration successful!");
       
-      // Refresh the session one more time to ensure all data is up to date
       await refreshSession();
       
-      // Redirect to dashboard
       navigate("/admin/dashboard");
     } catch (error: any) {
       console.error("Admin signup error:", error);
       
-      // Handle common errors
       if (error.message?.includes("already registered")) {
         toast.error("This email is already registered. Please log in instead.");
       } else {
         toast.error(error.message || "Failed to register pump. Please try again.");
       }
       
-      // Sign out the user in case of error
       await supabase.auth.signOut();
     } finally {
       setIsLoading(false);
