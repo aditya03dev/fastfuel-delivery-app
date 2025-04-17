@@ -111,7 +111,10 @@ export function AdminSignupForm() {
         throw new Error("Admin registration failed");
       }
 
-      // Step 3: Create pump profile
+      // Get the session right after signup to have proper authorization
+      await refreshSession();
+
+      // Step 3: Create pump profile with explicit user ID to satisfy RLS
       const { error: profileError } = await supabase.from('pump_profiles').insert({
         id: authData.user.id,
         pump_name: values.pumpName,
@@ -121,12 +124,15 @@ export function AdminSignupForm() {
         diesel_price: Number(values.dieselPrice)
       });
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Profile creation error:", profileError);
+        throw new Error("Failed to create pump profile: " + profileError.message);
+      }
       
       // Show success toast
       toast.success("Petrol pump registration successful!");
       
-      // Refresh the session
+      // Refresh the session one more time to ensure all data is up to date
       await refreshSession();
       
       // Redirect to dashboard
