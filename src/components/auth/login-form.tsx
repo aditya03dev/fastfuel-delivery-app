@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Form schema with validation
 const formSchema = z.object({
@@ -35,6 +36,7 @@ interface LoginFormProps {
 
 export function LoginForm({ userType }: LoginFormProps) {
   const navigate = useNavigate();
+  const { refreshSession } = useAuth();
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
 
   // Create form with validation schema
@@ -62,6 +64,9 @@ export function LoginForm({ userType }: LoginFormProps) {
       if (!data.user) {
         throw new Error("Login failed");
       }
+
+      // Refresh session to get user role
+      await refreshSession();
 
       // Fetch user role to redirect correctly
       const { data: roleData, error: roleError } = await supabase

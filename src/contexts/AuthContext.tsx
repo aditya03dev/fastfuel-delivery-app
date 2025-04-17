@@ -10,6 +10,7 @@ type AuthContextType = {
   isLoading: boolean;
   userRole: "user" | "admin" | null;
   signOut: () => Promise<void>;
+  refreshSession: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,6 +20,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<"user" | "admin" | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Function to fetch user role
+  const fetchUserRole = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching user role:", error);
+        return;
+      }
+
+      setUserRole(data.role as "user" | "admin");
+    } catch (error) {
+      console.error("Error in fetchUserRole:", error);
+    }
+  };
+
+  // Function to refresh session
+  const refreshSession = async () => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) {
+        throw error;
+      }
+      
+      setSession(data.session);
+      setUser(data.session?.user ?? null);
+      
+      if (data.session?.user) {
+        await fetchUserRole(data.session.user.id);
+      }
+    } catch (error) {
+      console.error("Error refreshing session:", error);
+    }
+  };
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -55,25 +95,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const fetchUserRole = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .single();
-
-      if (error) {
-        console.error("Error fetching user role:", error);
-        return;
-      }
-
-      setUserRole(data.role as "user" | "admin");
-    } catch (error) {
-      console.error("Error in fetchUserRole:", error);
-    }
-  };
-
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -85,7 +106,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, isLoading, userRole, signOut }}>
+    <AuthContext.Provider value={{ 
+      session, 
+      user, 
+      isLoading, 
+      userRole, 
+      signOut,
+      refreshSession 
+    }}>
       {children}
     </AuthContext.Provider>
   );

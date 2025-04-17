@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Form schema with validation
 const formSchema = z.object({
@@ -52,6 +53,7 @@ type AdminSignupFormValues = z.infer<typeof formSchema>;
 
 export function AdminSignupForm() {
   const navigate = useNavigate();
+  const { refreshSession } = useAuth();
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
 
   // Create form with validation schema
@@ -122,13 +124,13 @@ export function AdminSignupForm() {
       if (profileError) throw profileError;
       
       // Show success toast
-      toast.success("Petrol pump registration successful! You can now log in.");
+      toast.success("Petrol pump registration successful!");
       
-      // Sign out the user so they can log in explicitly
-      await supabase.auth.signOut();
+      // Refresh the session
+      await refreshSession();
       
-      // Redirect to login
-      navigate("/admin/login");
+      // Redirect to dashboard
+      navigate("/admin/dashboard");
     } catch (error: any) {
       console.error("Admin signup error:", error);
       
@@ -138,6 +140,9 @@ export function AdminSignupForm() {
       } else {
         toast.error(error.message || "Failed to register pump. Please try again.");
       }
+      
+      // Sign out the user in case of error
+      await supabase.auth.signOut();
     } finally {
       setIsLoading(false);
     }

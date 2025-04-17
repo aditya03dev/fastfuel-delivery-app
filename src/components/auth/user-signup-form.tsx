@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Form schema with validation
 const formSchema = z.object({
@@ -40,6 +41,7 @@ type UserSignupFormValues = z.infer<typeof formSchema>;
 
 export function UserSignupForm() {
   const navigate = useNavigate();
+  const { refreshSession } = useAuth();
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
 
   // Create form with validation schema
@@ -87,13 +89,13 @@ export function UserSignupForm() {
       if (profileError) throw profileError;
       
       // Show success toast
-      toast.success("Account created successfully! You can now log in.");
+      toast.success("Account created successfully!");
       
-      // Sign out the user so they can log in explicitly
-      await supabase.auth.signOut();
+      // Refresh the session
+      await refreshSession();
       
-      // Redirect to login
-      navigate("/user/login");
+      // Redirect to order fuel page
+      navigate("/user/order");
     } catch (error: any) {
       console.error("Signup error:", error);
       
@@ -103,6 +105,9 @@ export function UserSignupForm() {
       } else {
         toast.error(error.message || "Failed to create account. Please try again.");
       }
+      
+      // Sign out the user in case of error
+      await supabase.auth.signOut();
     } finally {
       setIsLoading(false);
     }
