@@ -1,0 +1,228 @@
+
+import * as React from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+
+// Form schema with validation
+const formSchema = z.object({
+  pumpName: z.string().min(3, {
+    message: "Pump name must be at least 3 characters.",
+  }),
+  adminUsername: z.string().min(3, {
+    message: "Username must be at least 3 characters.",
+  }).regex(/^[a-z0-9_]+$/, {
+    message: "Username can only contain lowercase letters, numbers, and underscores.",
+  }),
+  email: z.string().email({
+    message: "Please enter a valid email address.",
+  }),
+  phone: z.string().regex(/^\d{10}$/, {
+    message: "Phone number must be 10 digits.",
+  }),
+  password: z.string().min(8, {
+    message: "Password must be at least 8 characters.",
+  }),
+  address: z.string().min(5, {
+    message: "Address must be at least 5 characters.",
+  }),
+  petrolPrice: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
+    message: "Petrol price must be greater than 0.",
+  }),
+  dieselPrice: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
+    message: "Diesel price must be greater than 0.",
+  }),
+});
+
+type AdminSignupFormValues = z.infer<typeof formSchema>;
+
+export function AdminSignupForm() {
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = React.useState<boolean>(false);
+
+  // Create form with validation schema
+  const form = useForm<AdminSignupFormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      pumpName: "",
+      adminUsername: "",
+      email: "",
+      phone: "",
+      password: "",
+      address: "Kandivali, Mumbai",
+      petrolPrice: "100",
+      dieselPrice: "90",
+    },
+  });
+
+  // Handle form submission - this will be connected to Supabase later
+  async function onSubmit(values: AdminSignupFormValues) {
+    setIsLoading(true);
+    
+    // This is a temporary handler until Supabase is connected
+    try {
+      // Mock API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Will be replaced with Supabase auth signup
+      console.log("Admin signup data:", values);
+      
+      // Show success toast
+      toast.success("Petrol pump registration successful!");
+      
+      // Redirect to login
+      navigate("/admin/login");
+    } catch (error) {
+      toast.error("Something went wrong. Please try again.");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="pumpName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Petrol Pump Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Shell Kandivali West" {...field} />
+              </FormControl>
+              <FormDescription>
+                This is the name users will see when selecting your pump.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="adminUsername"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Admin Username</FormLabel>
+              <FormControl>
+                <Input placeholder="shell_admin" {...field} />
+              </FormControl>
+              <FormDescription>
+                This will be your unique identifier on the platform.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input placeholder="admin@example.com" type="email" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="phone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Phone Number</FormLabel>
+              <FormControl>
+                <Input placeholder="9876543210" type="tel" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input placeholder="••••••••" type="password" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="address"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Pump Address</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Your pump address in Kandivali, Mumbai" 
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="petrolPrice"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Petrol Price (₹/L)</FormLabel>
+                <FormControl>
+                  <Input type="number" min="1" step="0.01" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="dieselPrice"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Diesel Price (₹/L)</FormLabel>
+                <FormControl>
+                  <Input type="number" min="1" step="0.01" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? "Registering pump..." : "Register Petrol Pump"}
+        </Button>
+      </form>
+    </Form>
+  );
+}

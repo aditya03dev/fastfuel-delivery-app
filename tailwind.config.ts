@@ -52,6 +52,32 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+                // FastFuel custom colors
+                fuel: {
+                    blue: {
+                        DEFAULT: '#0056b3',
+                        light: '#3498db',
+                        dark: '#003366',
+                    },
+                    orange: {
+                        DEFAULT: '#f97316',
+                        light: '#ff9f43',
+                        dark: '#e67e22',
+                    },
+                    green: {
+                        DEFAULT: '#10b981',
+                        light: '#7bed9f',
+                    },
+                    red: {
+                        DEFAULT: '#ef4444',
+                        light: '#ff7675',
+                    },
+                    gray: {
+                        DEFAULT: '#4b5563',
+                        light: '#f8fafc',
+                        dark: '#1e293b',
+                    }
+                },
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
