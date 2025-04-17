@@ -11,28 +11,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
-
-type AuthStatus = "authenticated" | "unauthenticated";
-type UserRole = "user" | "admin" | null;
+import { useAuth } from "@/contexts/AuthContext";
 
 export function Header() {
-  // This will be replaced with actual auth logic once Supabase is connected
-  const [authStatus, setAuthStatus] = useState<AuthStatus>("unauthenticated");
-  const [userRole, setUserRole] = useState<UserRole>(null);
-  
+  const { user, userRole, signOut, isLoading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Mock logout function - will be replaced with Supabase auth
-  const handleLogout = () => {
-    setAuthStatus("unauthenticated");
-    setUserRole(null);
-    navigate("/");
-  };
-
   // Skip showing header on initial role selection page
-  if (location.pathname === "/" && authStatus === "unauthenticated") {
+  if (location.pathname === "/" && !user) {
     return null;
   }
 
@@ -44,7 +31,7 @@ export function Header() {
           <span className="text-xl font-bold text-fuel-blue-dark">FastFuel</span>
         </Link>
         
-        {authStatus === "authenticated" ? (
+        {user ? (
           <div className="flex items-center gap-4">
             {userRole === "user" ? (
               <nav className="hidden md:flex gap-6">
@@ -122,7 +109,7 @@ export function Header() {
                       {userRole === "user" ? "User Account" : "Admin Account"}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {userRole === "user" ? "User Dashboard" : "Pump Dashboard"}
+                      {user.email}
                     </p>
                   </div>
                 </div>
@@ -133,7 +120,7 @@ export function Header() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   className="text-destructive flex cursor-pointer items-center"
-                  onClick={handleLogout}
+                  onClick={signOut}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   Log out
@@ -179,10 +166,10 @@ export function Header() {
           </div>
         ) : (
           <div className="flex items-center gap-4">
-            <Link to="/login">
+            <Link to="/role-selection">
               <Button variant="outline">Log in</Button>
             </Link>
-            <Link to="/signup">
+            <Link to="/role-selection">
               <Button>Sign up</Button>
             </Link>
           </div>

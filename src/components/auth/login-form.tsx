@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 // Form schema with validation
 const formSchema = z.object({
@@ -45,17 +46,42 @@ export function LoginForm({ userType }: LoginFormProps) {
     },
   });
 
-  // Handle form submission - this will be connected to Supabase later
+  // Handle form submission with Supabase auth
   async function onSubmit(values: LoginFormValues) {
     setIsLoading(true);
     
-    // This is a temporary handler until Supabase is connected
     try {
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Sign in with Supabase auth
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      });
+
+      if (error) throw error;
       
-      // Will be replaced with Supabase auth login
-      console.log(`${userType} login data:`, values);
+      if (!data.user) {
+        throw new Error("Login failed");
+      }
+
+      // Fetch user role to redirect correctly
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', data.user.id)
+        .single();
+
+      if (roleError) throw roleError;
+
+      // Check if login type matches with user role
+      if (userType === 'user' && roleData.role !== 'user') {
+        await supabase.auth.signOut();
+        throw new Error("This is a user login page. Please use the admin login.");
+      }
+
+      if (userType === 'admin' && roleData.role !== 'admin') {
+        await supabase.auth.signOut();
+        throw new Error("This is an admin login page. Please use the user login.");
+      }
       
       // Show success toast
       toast.success("Login successful!");
@@ -66,9 +92,15 @@ export function LoginForm({ userType }: LoginFormProps) {
       } else {
         navigate("/admin/dashboard");
       }
-    } catch (error) {
-      toast.error("Invalid email or password. Please try again.");
-      console.error(error);
+    } catch (error: any) {
+      console.error("Login error:", error);
+      
+      let errorMessage = "Invalid email or password. Please try again.";
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

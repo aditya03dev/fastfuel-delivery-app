@@ -18,39 +18,42 @@ import OrderRequests from "./pages/admin/OrderRequests";
 import UserManagement from "./pages/admin/UserManagement";
 import ViewFeedback from "./pages/admin/ViewFeedback";
 import { Footer } from "./components/layout/footer";
+import { AuthProvider } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* Landing Page */}
-          <Route path="/" element={<Index />} />
-          <Route path="/role-selection" element={<RoleSelection />} />
-          
-          {/* User Routes */}
-          <Route path="/user/signup" element={<UserSignup />} />
-          <Route path="/user/login" element={<UserLogin />} />
-          <Route path="/user/order" element={<OrderFuel />} />
-          <Route path="/user/orders" element={<MyOrders />} />
-          
-          {/* Admin Routes */}
-          <Route path="/admin/signup" element={<AdminSignup />} />
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/orders" element={<OrderRequests />} />
-          <Route path="/admin/users" element={<UserManagement />} />
-          <Route path="/admin/feedback" element={<ViewFeedback />} />
-          
-          {/* 404 Route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Landing Page */}
+            <Route path="/" element={<Index />} />
+            <Route path="/role-selection" element={<RoleSelection />} />
+            
+            {/* User Routes */}
+            <Route path="/user/signup" element={<UserSignup />} />
+            <Route path="/user/login" element={<UserLogin />} />
+            <Route path="/user/order" element={<OrderFuel />} />
+            <Route path="/user/orders" element={<MyOrders />} />
+            
+            {/* Admin Routes */}
+            <Route path="/admin/signup" element={<AdminSignup />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/orders" element={<OrderRequests />} />
+            <Route path="/admin/users" element={<UserManagement />} />
+            <Route path="/admin/feedback" element={<ViewFeedback />} />
+            
+            {/* 404 Route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

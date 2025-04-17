@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 // Form schema with validation
 const formSchema = z.object({
@@ -68,26 +69,75 @@ export function AdminSignupForm() {
     },
   });
 
-  // Handle form submission - this will be connected to Supabase later
+  // Handle form submission with Supabase auth
   async function onSubmit(values: AdminSignupFormValues) {
     setIsLoading(true);
     
-    // This is a temporary handler until Supabase is connected
     try {
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Step 1: Check if pump name or admin username already exists
+      const { data: existingPump, error: checkError } = await supabase
+        .from('pump_profiles')
+        .select('pump_name, admin_username')
+        .or(`pump_name.eq.${values.pumpName},admin_username.eq.${values.adminUsername}`)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
       
-      // Will be replaced with Supabase auth signup
-      console.log("Admin signup data:", values);
+      if (existingPump) {
+        if (existingPump.pump_name === values.pumpName) {
+          throw new Error("This petrol pump name is already registered");
+        }
+        if (existingPump.admin_username === values.adminUsername) {
+          throw new Error("This admin username is already taken");
+        }
+      }
+
+      // Step 2: Sign up with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            is_admin: true, // Mark as admin
+          }
+        }
+      });
+
+      if (authError) throw authError;
+      
+      if (!authData.user) {
+        throw new Error("Admin registration failed");
+      }
+
+      // Step 3: Create pump profile
+      const { error: profileError } = await supabase.from('pump_profiles').insert({
+        id: authData.user.id,
+        pump_name: values.pumpName,
+        admin_username: values.adminUsername,
+        address: values.address,
+        petrol_price: Number(values.petrolPrice),
+        diesel_price: Number(values.dieselPrice)
+      });
+
+      if (profileError) throw profileError;
       
       // Show success toast
-      toast.success("Petrol pump registration successful!");
+      toast.success("Petrol pump registration successful! You can now log in.");
+      
+      // Sign out the user so they can log in explicitly
+      await supabase.auth.signOut();
       
       // Redirect to login
       navigate("/admin/login");
-    } catch (error) {
-      toast.error("Something went wrong. Please try again.");
-      console.error(error);
+    } catch (error: any) {
+      console.error("Admin signup error:", error);
+      
+      // Handle common errors
+      if (error.message?.includes("already registered")) {
+        toast.error("This email is already registered. Please log in instead.");
+      } else {
+        toast.error(error.message || "Failed to register pump. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }

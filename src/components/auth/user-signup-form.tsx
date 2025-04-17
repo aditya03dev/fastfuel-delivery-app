@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 // Form schema with validation
 const formSchema = z.object({
@@ -53,26 +54,55 @@ export function UserSignupForm() {
     },
   });
 
-  // Handle form submission - this will be connected to Supabase later
+  // Handle form submission with Supabase auth
   async function onSubmit(values: UserSignupFormValues) {
     setIsLoading(true);
     
-    // This is a temporary handler until Supabase is connected
     try {
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Step 1: Sign up with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            is_admin: false, // Mark as regular user
+          }
+        }
+      });
+
+      if (authError) throw authError;
       
-      // Will be replaced with Supabase auth signup
-      console.log("User signup data:", values);
+      if (!authData.user) {
+        throw new Error("User registration failed");
+      }
+
+      // Step 2: Create user profile
+      const { error: profileError } = await supabase.from('user_profiles').insert({
+        id: authData.user.id,
+        name: values.name,
+        phone: values.phone,
+        address: values.address
+      });
+
+      if (profileError) throw profileError;
       
       // Show success toast
-      toast.success("Account created successfully!");
+      toast.success("Account created successfully! You can now log in.");
+      
+      // Sign out the user so they can log in explicitly
+      await supabase.auth.signOut();
       
       // Redirect to login
       navigate("/user/login");
-    } catch (error) {
-      toast.error("Something went wrong. Please try again.");
-      console.error(error);
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      
+      // Handle common errors
+      if (error.message?.includes("already registered")) {
+        toast.error("This email is already registered. Please log in instead.");
+      } else {
+        toast.error(error.message || "Failed to create account. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
