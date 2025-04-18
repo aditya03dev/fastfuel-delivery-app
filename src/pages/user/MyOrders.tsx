@@ -8,93 +8,61 @@ import { Header } from "@/components/layout/header";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-// Mock data - will be replaced with Supabase data
-const mockOrders: OrderData[] = [
-  {
-    id: "ord123456789",
-    pumpName: "Shell Kandivali West",
-    adminUsername: "shell_admin",
-    fuelType: "petrol",
-    quantity: 10,
-    totalAmount: 1025.00,
-    status: "pending",
-    timestamp: new Date().toISOString(),
-    deliveryAddress: "Kapol Vidyanidhi College, Kandivali, Mumbai",
-  },
-  {
-    id: "ord223456789",
-    pumpName: "HP Kandivali East",
-    adminUsername: "hp_admin",
-    fuelType: "diesel",
-    quantity: 15,
-    totalAmount: 1335.00,
-    status: "accepted",
-    timestamp: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-    deliveryAddress: "Kapol Vidyanidhi College, Kandivali, Mumbai",
-  },
-  {
-    id: "ord323456789",
-    pumpName: "Indian Oil Kandivali",
-    adminUsername: "ioc_admin",
-    fuelType: "petrol",
-    quantity: 5,
-    totalAmount: 504.50,
-    status: "delivered",
-    timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-    deliveryAddress: "Kapol Vidyanidhi College, Kandivali, Mumbai",
-  },
-  {
-    id: "ord423456789",
-    pumpName: "Shell Kandivali West",
-    adminUsername: "shell_admin",
-    fuelType: "diesel",
-    quantity: 8,
-    totalAmount: 714.40,
-    status: "declined",
-    timestamp: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-    deliveryAddress: "Kapol Vidyanidhi College, Kandivali, Mumbai",
-  },
-  {
-    id: "ord523456789",
-    pumpName: "HP Kandivali East",
-    adminUsername: "hp_admin",
-    fuelType: "petrol",
-    quantity: 12,
-    totalAmount: 1221.60,
-    status: "en_route",
-    timestamp: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
-    deliveryAddress: "Kapol Vidyanidhi College, Kandivali, Mumbai",
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const MyOrders = () => {
-  const [orders, setOrders] = useState<OrderData[]>(mockOrders);
+  const { user } = useAuth();
   const [feedbackOrderId, setFeedbackOrderId] = useState<string | null>(null);
   const [feedbackPumpName, setFeedbackPumpName] = useState<string>("");
-  
-  // Helper function to find order by ID
-  const getOrderById = (id: string) => {
-    return orders.find(order => order.id === id);
-  };
+
+  // Fetch orders from Supabase
+  const { data: orders = [], refetch } = useQuery({
+    queryKey: ['orders', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          pump:pump_profiles(pump_name)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return data.map(order => ({
+        id: order.id,
+        pumpName: order.pump.pump_name,
+        fuelType: order.fuel_type,
+        quantity: order.quantity,
+        totalAmount: order.total_amount,
+        status: order.status,
+        timestamp: order.created_at,
+        deliveryAddress: order.delivery_address,
+        pump_id: order.pump_id
+      }));
+    },
+    enabled: !!user
+  });
 
   // Handle order cancellation
   const handleCancelOrder = async (orderId: string) => {
     try {
-      // Mock API call - will be replaced with Supabase
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Update local state
-      setOrders(prevOrders => 
-        prevOrders.map(order => 
-          order.id === orderId 
-            ? { ...order, status: "cancelled" } 
-            : order
-        )
-      );
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'cancelled' })
+        .eq('id', orderId)
+        .eq('status', 'pending');
+
+      if (error) throw error;
       
       toast.success("Order cancelled successfully!");
-    } catch (error) {
+      refetch();
+    } catch (error: any) {
       toast.error("Failed to cancel order. Please try again.");
       console.error(error);
     }
@@ -102,25 +70,20 @@ const MyOrders = () => {
 
   // Handle feedback dialog
   const handleFeedbackClick = (orderId: string) => {
-    const order = getOrderById(orderId);
+    const order = orders.find(o => o.id === orderId);
     if (order) {
       setFeedbackOrderId(orderId);
       setFeedbackPumpName(order.pumpName);
     }
   };
 
-  // Close feedback dialog
-  const closeFeedbackDialog = () => {
-    setFeedbackOrderId(null);
-  };
-
-  // Filter orders by status for tabs
+  // Filter orders by status
   const activeOrders = orders.filter(order => 
     ["pending", "accepted", "en_route"].includes(order.status)
   );
   
   const completedOrders = orders.filter(order => 
-    ["delivered"].includes(order.status)
+    order.status === "delivered"
   );
   
   const cancelledOrders = orders.filter(order => 
@@ -211,7 +174,7 @@ const MyOrders = () => {
         </div>
         
         {/* Feedback Dialog */}
-        <Dialog open={!!feedbackOrderId} onOpenChange={() => closeFeedbackDialog()}>
+        <Dialog open={!!feedbackOrderId} onOpenChange={() => setFeedbackOrderId(null)}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Leave Feedback</DialogTitle>
@@ -220,7 +183,7 @@ const MyOrders = () => {
               <FeedbackForm
                 orderId={feedbackOrderId}
                 pumpName={feedbackPumpName}
-                onSubmitComplete={closeFeedbackDialog}
+                onSubmitComplete={() => setFeedbackOrderId(null)}
               />
             )}
           </DialogContent>

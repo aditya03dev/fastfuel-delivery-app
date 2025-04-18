@@ -1,4 +1,4 @@
-
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -8,19 +8,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-
-// Mock data - will be replaced with Supabase data
-const mockPumps = [
-  { id: "1", pumpName: "Shell Kandivali West", adminUsername: "shell_admin", petrolPrice: 102.5, dieselPrice: 89.3 },
-  { id: "2", pumpName: "HP Kandivali East", adminUsername: "hp_admin", petrolPrice: 101.8, dieselPrice: 88.9 },
-  { id: "3", pumpName: "Indian Oil Kandivali", adminUsername: "ioc_admin", petrolPrice: 100.9, dieselPrice: 87.5 },
-];
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Form schema
 const orderFormSchema = z.object({
@@ -45,25 +40,34 @@ type OrderFormValues = z.infer<typeof orderFormSchema>;
 
 const OrderFuel = () => {
   const navigate = useNavigate();
-  const [selectedPump, setSelectedPump] = useState<typeof mockPumps[0] | null>(null);
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch available pumps
+  const { data: pumps = [], isLoading: isPumpsLoading } = useQuery({
+    queryKey: ['pumps'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pump_profiles')
+        .select('*');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
   
-  // Initialize form
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
     defaultValues: {
       pumpId: "",
       fuelType: "petrol",
       quantity: "10",
-      deliveryAddress: "Kapol Vidyanidhi College, Kandivali, Mumbai",
+      deliveryAddress: "",
     },
   });
   
-  // Handle pump selection
-  const handlePumpChange = (pumpId: string) => {
-    const pump = mockPumps.find((p) => p.id === pumpId);
-    setSelectedPump(pump || null);
-  };
+  // Get selected pump details
+  const selectedPump = pumps.find((p) => p.id === form.watch("pumpId"));
   
   // Calculate order total
   const calculateTotal = () => {
@@ -73,36 +77,41 @@ const OrderFuel = () => {
     const fuelType = form.watch("fuelType");
     
     const price = fuelType === "petrol" 
-      ? selectedPump.petrolPrice 
-      : selectedPump.dieselPrice;
+      ? selectedPump.petrol_price 
+      : selectedPump.diesel_price;
       
     return price * quantity;
   };
   
   // Handle form submission
   const onSubmit = async (data: OrderFormValues) => {
+    if (!user) {
+      toast.error("Please log in to place an order");
+      return;
+    }
+
     setIsLoading(true);
     
     try {
-      // Mock API call - will be replaced with Supabase
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const { error } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          pump_id: data.pumpId,
+          fuel_type: data.fuelType,
+          quantity: Number(data.quantity),
+          total_amount: calculateTotal(),
+          status: 'pending',
+          delivery_address: data.deliveryAddress,
+        });
+
+      if (error) throw error;
       
-      // Log order data
-      console.log("Order data:", {
-        ...data,
-        total: calculateTotal(),
-        timestamp: new Date().toISOString(),
-        status: "pending",
-      });
-      
-      // Show success toast
       toast.success("Order placed successfully!");
-      
-      // Redirect to orders page
       navigate("/user/orders");
-    } catch (error) {
-      toast.error("Failed to place order. Please try again.");
-      console.error(error);
+    } catch (error: any) {
+      console.error("Order error:", error);
+      toast.error(error.message || "Failed to place order");
     } finally {
       setIsLoading(false);
     }
@@ -113,7 +122,6 @@ const OrderFuel = () => {
       <Header />
       <main className="flex-1 container py-12">
         <div className="grid gap-8 md:grid-cols-2">
-          {/* Order Form */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -134,10 +142,7 @@ const OrderFuel = () => {
                       <FormItem>
                         <FormLabel>Petrol Pump</FormLabel>
                         <Select 
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            handlePumpChange(value);
-                          }}
+                          onValueChange={field.onChange}
                           defaultValue={field.value}
                         >
                           <FormControl>
@@ -146,21 +151,27 @@ const OrderFuel = () => {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {mockPumps.map((pump) => (
-                              <SelectItem key={pump.id} value={pump.id}>
-                                {pump.pumpName} ({pump.adminUsername})
-                              </SelectItem>
-                            ))}
+                            {isPumpsLoading ? (
+                              <SelectItem value="">Loading pumps...</SelectItem>
+                            ) : pumps.length === 0 ? (
+                              <SelectItem value="">No pumps available</SelectItem>
+                            ) : (
+                              pumps.map((pump) => (
+                                <SelectItem key={pump.id} value={pump.id}>
+                                  {pump.pump_name}
+                                </SelectItem>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
                         <FormDescription>
-                          Choose from registered pumps in Kandivali
+                          Choose from registered pumps in your area
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   {selectedPump && (
                     <>
                       <FormField
@@ -180,7 +191,7 @@ const OrderFuel = () => {
                                     <RadioGroupItem value="petrol" />
                                   </FormControl>
                                   <FormLabel className="font-normal">
-                                    Petrol (₹{selectedPump.petrolPrice}/L)
+                                    Petrol (₹{selectedPump.petrol_price}/L)
                                   </FormLabel>
                                 </FormItem>
                                 <FormItem className="flex items-center space-x-2 space-y-0">
@@ -188,7 +199,7 @@ const OrderFuel = () => {
                                     <RadioGroupItem value="diesel" />
                                   </FormControl>
                                   <FormLabel className="font-normal">
-                                    Diesel (₹{selectedPump.dieselPrice}/L)
+                                    Diesel (₹{selectedPump.diesel_price}/L)
                                   </FormLabel>
                                 </FormItem>
                               </RadioGroup>
@@ -197,7 +208,7 @@ const OrderFuel = () => {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="quantity"
@@ -220,7 +231,7 @@ const OrderFuel = () => {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="deliveryAddress"
@@ -231,7 +242,7 @@ const OrderFuel = () => {
                               <Input {...field} />
                             </FormControl>
                             <FormDescription>
-                              Your delivery address in Kandivali, Mumbai
+                              Your delivery address
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -239,7 +250,7 @@ const OrderFuel = () => {
                       />
                     </>
                   )}
-                  
+
                   {selectedPump && (
                     <Button 
                       type="submit" 
@@ -253,8 +264,8 @@ const OrderFuel = () => {
               </Form>
             </CardContent>
           </Card>
-          
-          {/* Order Summary */}
+
+          {/* Order Summary Card */}
           <div>
             <Card>
               <CardHeader>
@@ -266,7 +277,7 @@ const OrderFuel = () => {
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-2">
                       <div className="text-sm text-muted-foreground">Petrol Pump:</div>
-                      <div className="text-sm font-medium">{selectedPump.pumpName}</div>
+                      <div className="text-sm font-medium">{selectedPump.pump_name}</div>
                       
                       <div className="text-sm text-muted-foreground">Fuel Type:</div>
                       <div className="text-sm font-medium capitalize">
@@ -281,8 +292,8 @@ const OrderFuel = () => {
                       <div className="text-sm text-muted-foreground">Unit Price:</div>
                       <div className="text-sm font-medium">
                         ₹{form.watch("fuelType") === "petrol" 
-                          ? selectedPump.petrolPrice 
-                          : selectedPump.dieselPrice}/L
+                          ? selectedPump.petrol_price 
+                          : selectedPump.diesel_price}/L
                       </div>
                       
                       <div className="text-sm text-muted-foreground">Delivery Address:</div>
