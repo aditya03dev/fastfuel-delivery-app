@@ -72,6 +72,7 @@ export function AdminSignupForm() {
     setIsLoading(true);
     
     try {
+      // Check for existing pump or admin username
       const { data: existingPump, error: checkError } = await supabase
         .from('pump_profiles')
         .select('pump_name, admin_username')
@@ -89,6 +90,7 @@ export function AdminSignupForm() {
         }
       }
 
+      // Sign up the admin user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
@@ -105,8 +107,10 @@ export function AdminSignupForm() {
         throw new Error("Admin registration failed");
       }
 
+      // Refresh session to ensure proper authentication state
       await refreshSession();
 
+      // Create the pump profile - now using the user's ID as the profile ID
       const { error: profileError } = await supabase.from('pump_profiles').insert({
         id: authData.user.id,
         pump_name: values.pumpName,
@@ -120,21 +124,12 @@ export function AdminSignupForm() {
         console.error("Profile creation error:", profileError);
         throw new Error("Failed to create pump profile: " + profileError.message);
       }
-      
+
       toast.success("Petrol pump registration successful!");
-      
-      await refreshSession();
-      
       navigate("/admin/dashboard");
     } catch (error: any) {
       console.error("Admin signup error:", error);
-      
-      if (error.message?.includes("already registered")) {
-        toast.error("This email is already registered. Please log in instead.");
-      } else {
-        toast.error(error.message || "Failed to register pump. Please try again.");
-      }
-      
+      toast.error(error.message || "Failed to register pump. Please try again.");
       await supabase.auth.signOut();
     } finally {
       setIsLoading(false);
