@@ -86,7 +86,10 @@ export function UserSignupForm() {
         address: values.address
       });
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Profile creation error:", profileError);
+        throw new Error("Failed to create user profile: " + profileError.message);
+      }
       
       // Show success toast
       toast.success("Account created successfully!");
