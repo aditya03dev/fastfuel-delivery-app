@@ -1,3 +1,4 @@
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +21,6 @@ export interface OrderData {
   status: OrderStatus;
   timestamp: string;
   deliveryAddress: string;
-  pump_id: string;
 }
 
 // Props interface
