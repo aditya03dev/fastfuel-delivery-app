@@ -74,7 +74,7 @@ export function Header() {
                 >
                   Order Requests
                 </Link>
-                <Link 
+                {/* <Link 
                   to="/admin/users" 
                   className={cn(
                     "text-sm font-medium transition-colors hover:text-fuel-blue",
@@ -82,8 +82,8 @@ export function Header() {
                   )}
                 >
                   User Management
-                </Link>
-                <Link 
+                </Link> */}
+                {/* <Link 
                   to="/admin/feedback" 
                   className={cn(
                     "text-sm font-medium transition-colors hover:text-fuel-blue",
@@ -91,7 +91,7 @@ export function Header() {
                   )}
                 >
                   Feedback
-                </Link>
+                </Link> */}
               </nav>
             )}
 

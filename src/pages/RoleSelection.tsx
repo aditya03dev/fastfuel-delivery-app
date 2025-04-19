@@ -24,7 +24,6 @@ const RoleSelection = () => {
               <li>Select from local registered petrol pumps</li>
               <li>Choose petrol or diesel with your required quantity</li>
               <li>Track your delivery in real-time</li>
-              <li>Rate and provide feedback after delivery</li>
             </ul>
           </CardContent>
           <CardFooter className="flex justify-center">
@@ -55,7 +54,6 @@ const RoleSelection = () => {
               <li>Register your Kandivali petrol pump with a unique name</li>
               <li>Set and update your fuel prices</li>
               <li>Manage incoming order requests</li>
-              <li>Track customer satisfaction with feedback</li>
             </ul>
           </CardContent>
           <CardFooter className="flex justify-center">

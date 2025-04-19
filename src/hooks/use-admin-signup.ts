@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { adminSignupFormSchema, type AdminSignupFormValues } from "@/lib/validations/admin-signup";
+import { v4 as uuidv4 } from 'uuid';
 
 export function useAdminSignup() {
   const navigate = useNavigate();
@@ -48,37 +49,83 @@ export function useAdminSignup() {
         }
       }
 
+      // const { data: authData, error: authError } = await supabase.auth.signUp({
+      //   email: values.email,
+      //   password: values.password,
+      //   options: {
+      //     data: {
+      //       is_admin: true,
+      //     }
+      //   }
+      // });
+
+      // if (authError) throw authError;
+      
+      // if (!authData.user) {
+      //   throw new Error("Admin registration failed");
+      // }
+
+      // await refreshSession();
+
+      // const { error: profileError } = await supabase.from('pump_profiles').insert({
+      //   id: authData.user.id,
+      //   user_id: authData.user.id,
+      //   pump_name: values.pumpName,
+      //   admin_username: values.adminUsername,
+      //   address: values.address,
+      //   petrol_price: Number(values.petrolPrice),
+      //   diesel_price: Number(values.dieselPrice)
+      // });
+
+      // if (profileError) {
+      //   console.error("Profile creation error:", profileError);
+      //   throw new Error("Failed to create pump profile: " + profileError.message);
+      // }
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
         options: {
           data: {
             is_admin: true,
-          }
-        }
+          },
+        },
       });
-
+      
       if (authError) throw authError;
       
       if (!authData.user) {
         throw new Error("Admin registration failed");
       }
-
+      
       await refreshSession();
-
-      const { error: profileError } = await supabase.from('pump_profiles').insert({
+      
+      // STEP 1: Insert into user_profiles to satisfy FK constraint
+      const { error: userProfileError } = await supabase.from("user_profiles").insert({
         id: authData.user.id,
+        name: values.adminUsername,
+        phone: values.phone, // make sure you have this input
+        address: values.address,
+      });
+      
+      if (userProfileError) {
+        throw new Error("Failed to create user profile: " + userProfileError.message);
+      }
+      const pumpId = uuidv4();
+      // STEP 2: Now you can safely insert into pump_profiles
+      const { error: profileError } = await supabase.from("pump_profiles").insert({
+        id: pumpId,
+        user_id: authData.user.id,
         pump_name: values.pumpName,
         admin_username: values.adminUsername,
         address: values.address,
         petrol_price: Number(values.petrolPrice),
-        diesel_price: Number(values.dieselPrice)
+        diesel_price: Number(values.dieselPrice),
       });
-
+      
       if (profileError) {
-        console.error("Profile creation error:", profileError);
         throw new Error("Failed to create pump profile: " + profileError.message);
       }
+      
 
       toast.success("Petrol pump registration successful!");
       navigate("/admin/dashboard");

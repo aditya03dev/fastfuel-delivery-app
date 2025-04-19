@@ -5,9 +5,11 @@ import { FeedbackForm } from "@/components/user/feedback-form";
 import { OrderCard, OrderData } from "@/components/user/order-card";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+
 
 // Mock data - will be replaced with Supabase data
 const mockOrders: OrderData[] = [
@@ -62,7 +64,7 @@ const mockOrders: OrderData[] = [
     fuelType: "petrol",
     quantity: 12,
     totalAmount: 1221.60,
-    status: "en_route",
+    status: "en route",
     timestamp: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
     deliveryAddress: "Kapol Vidyanidhi College, Kandivali, Mumbai",
   },
@@ -72,8 +74,87 @@ const MyOrders = () => {
   const [orders, setOrders] = useState<OrderData[]>(mockOrders);
   const [feedbackOrderId, setFeedbackOrderId] = useState<string | null>(null);
   const [feedbackPumpName, setFeedbackPumpName] = useState<string>("");
-  
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  // const fetchOrders = async () => {
+  //   const user = supabase.auth.getUser();
+
+  //   const { data, error } = await supabase
+  //     .from("orders")
+  //     .select(`
+  //       id,
+  //       fuel_type,
+  //       quantity,
+  //       total,
+  //       status,
+  //       timestamp,
+  //       address,
+  //       pump_profiles (
+  //         pump_name,
+  //         admin_username
+  //       )
+  //     `)
+  //     .eq("user_id", (await user).data.user?.id) // fetch only for current user
+  //     .order("timestamp", { ascending: false });
+
+  //   if (error) {
+  //     toast.error("Failed to fetch orders.");
+  //     console.error("Supabase fetch error:", error);
+  //     return;
+  //   }
+
+  //   const mappedOrders: OrderData[] = (data || []).map((order: any) => ({
+  //     id: order.id,
+  //     fuelType: order.fuel_type,
+  //     quantity: order.quantity,
+  //     totalAmount: order.total,
+  //     status: order.status,
+  //     timestamp: order.timestamp,
+  //     deliveryAddress: order.address,
+  //     pumpName: order.pump_profiles?.pump_name ?? "Unknown Pump",
+  //     adminUsername: order.pump_profiles?.admin_username ?? "unknown_admin",
+  //   }));
+
+  //   setOrders(mappedOrders);
+  //   console.log('map',mappedOrders);
+  // };
   // Helper function to find order by ID
+  const fetchOrders = async () => {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+    console.log('id',userId);
+  
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("user_id", userId)
+      .order("timestamp", { ascending: false });
+  
+    if (error) {
+      toast.error("Failed to fetch orders.");
+      console.error("Supabase fetch error:", error.message);
+      return;
+    }
+  
+    console.log("Orders data:", data);
+    const mappedOrders: OrderData[] = (data || []).map((order: any) => ({
+      id: order.id,
+      fuelType: order.fuel_type,
+      quantity: order.quantity,
+      totalAmount: order.total,
+      status: order.status,
+      timestamp: order.timestamp,
+      deliveryAddress: order.address,
+      pumpName: order.pump_profiles?.pump_name ?? "Unknown Pump",
+      adminUsername: order.pump_profiles?.admin_username ?? "Unknown Admin",
+    }));
+
+    // Update the state with the mapped orders
+    setOrders(mappedOrders);
+  };
+  
   const getOrderById = (id: string) => {
     return orders.find(order => order.id === id);
   };
@@ -82,8 +163,17 @@ const MyOrders = () => {
   const handleCancelOrder = async (orderId: string) => {
     try {
       // Mock API call - will be replaced with Supabase
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('order',orderId);
+      const { error } = await supabase
+      .from("orders")
+      .update({ status: "cancelled" })
+      .eq("id", orderId);
       
+      if (error) {
+        throw error;
+      }
+  
       // Update local state
       setOrders(prevOrders => 
         prevOrders.map(order => 
@@ -116,7 +206,7 @@ const MyOrders = () => {
 
   // Filter orders by status for tabs
   const activeOrders = orders.filter(order => 
-    ["pending", "accepted", "en_route"].includes(order.status)
+    ["pending", "accepted", "en route"].includes(order.status)
   );
   
   const completedOrders = orders.filter(order => 

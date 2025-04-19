@@ -70,7 +70,7 @@ const AdminDashboard = () => {
           </div>
           
           {/* Stats Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {/* <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -176,7 +176,7 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
           </div>
-          
+           */}
           <div className="grid gap-8 md:grid-cols-2">
             {/* Manage Prices */}
             <Card>
@@ -198,7 +198,7 @@ const AdminDashboard = () => {
             </Card>
             
             {/* Sales Chart */}
-            <Card>
+            {/* <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <FuelPumpIcon className="h-6 w-6 text-fuel-blue" />
@@ -234,7 +234,7 @@ const AdminDashboard = () => {
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
         </div>
       </main>

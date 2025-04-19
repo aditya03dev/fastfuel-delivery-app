@@ -44,7 +44,7 @@ export function OrderRequestCard({
         return "bg-amber-100 text-amber-600 hover:bg-amber-100";
       case "accepted":
         return "bg-blue-100 text-blue-600 hover:bg-blue-100";
-      case "en_route":
+      case "en route":
         return "bg-purple-100 text-purple-600 hover:bg-purple-100";
       case "delivered":
         return "bg-green-100 text-green-600 hover:bg-green-100";
@@ -81,7 +81,7 @@ export function OrderRequestCard({
   const handleMarkEnRoute = async () => {
     setIsLoading(true);
     try {
-      await onUpdateStatus(order.id, "en_route");
+      await onUpdateStatus(order.id, "en route");
     } finally {
       setIsLoading(false);
     }
@@ -110,7 +110,7 @@ export function OrderRequestCard({
         </div>
         <Badge className={cn("flex items-center gap-1", getStatusColor(order.status))}>
           {order.status === "pending" && <Clock className="h-4 w-4" />}
-          {order.status === "en_route" && <Truck className="h-4 w-4" />}
+          {order.status === "en route" && <Truck className="h-4 w-4" />}
           <span className="capitalize">{order.status.replace("_", " ")}</span>
         </Badge>
       </CardHeader>
@@ -171,7 +171,7 @@ export function OrderRequestCard({
           </Button>
         )}
         
-        {order.status === "en_route" && (
+        {order.status === "en route" && (
           <Button 
             variant="default" 
             size="sm" 
