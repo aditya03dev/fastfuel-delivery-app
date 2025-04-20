@@ -58,6 +58,7 @@ export function LoginForm({ userType }: LoginFormProps) {
         email: values.email,
         password: values.password,
       });
+      // console.log('user',data);
 
       if (error) throw error;
       

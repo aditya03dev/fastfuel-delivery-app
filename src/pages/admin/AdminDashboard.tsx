@@ -1,12 +1,27 @@
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ManagePricesForm } from "@/components/admin/manage-prices-form";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { FuelDropIcon, FuelPumpIcon } from "@/components/ui/icons";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { useState } from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 // Mock data - will be replaced with Supabase data
 const mockAdminData = {
@@ -37,19 +52,64 @@ const mockAdminData = {
 
 const AdminDashboard = () => {
   const [adminData, setAdminData] = useState(mockAdminData);
-  
+  const [prices, setPrices] = useState(0);
+  const [diesel, setDiesal] = useState(0);
+  const [pump_name, setPump_name] = useState("");
+
+  const fetchPrice = async () => {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+    console.log("id", userId);
+
+    const { data: pumpData, error: pumpError } = await supabase
+      .from("pump_profiles")
+      .select("*") // 'id' is the pump_id
+      .eq("user_id", userId)
+      .single(); // Expect only one pump per admin
+
+    if (pumpError || !pumpData) {
+      console.error("Failed to fetch pump for admin:", pumpError);
+      return;
+    }
+
+    const pumpId = pumpData.id;
+    console.log("pump", pumpData);
+
+    // console.log("Orders data:", ordersData);
+    setDiesal(pumpData.diesel_price);
+    setPrices(pumpData.petrol_price);
+    setPump_name(pumpData.pump_name);
+  };
+  useEffect(() => {
+    fetchPrice();
+  }, []);
   // Handle price updates
-  const handleUpdatePrices = async (prices: { petrolPrice: number; dieselPrice: number }) => {
+  const handleUpdatePrices = async (prices: {
+    petrolPrice: number;
+    dieselPrice: number;
+  }) => {
     try {
       // Mock API call - will be replaced with Supabase
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      // await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      console.log("id", userId);
+      const { error } = await supabase
+        .from("pump_profiles")
+        .update({
+          petrol_price: prices.petrolPrice,
+          diesel_price: prices.dieselPrice,
+        })
+        .eq("user_id", userId);
+
+      setPrices(prices.petrolPrice);
+      setDiesal(prices.dieselPrice);
       // Update local state
-      setAdminData(prev => ({
+      setAdminData((prev) => ({
         ...prev,
         prices,
       }));
-      
+
       return Promise.resolve();
     } catch (error) {
       console.error(error);
@@ -63,12 +123,14 @@ const AdminDashboard = () => {
       <main className="flex-1 container py-12">
         <div className="space-y-8">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{adminData.pumpName} Dashboard</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {pump_name} Dashboard
+            </h1>
             <p className="text-muted-foreground">
               Manage your fuel delivery services
             </p>
           </div>
-          
+
           {/* Stats Cards */}
           {/* <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
@@ -190,13 +252,13 @@ const AdminDashboard = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ManagePricesForm 
-                  currentPrices={adminData.prices}
+                <ManagePricesForm
+                  currentPrices={{ petrolPrice: prices, dieselPrice: diesel }}
                   onUpdatePrices={handleUpdatePrices}
                 />
               </CardContent>
             </Card>
-            
+
             {/* Sales Chart */}
             {/* <Card>
               <CardHeader>

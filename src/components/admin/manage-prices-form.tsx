@@ -47,7 +47,12 @@ export function ManagePricesForm({ currentPrices, onUpdatePrices }: ManagePrices
       dieselPrice: currentPrices.dieselPrice.toString(),
     },
   });
-
+  React.useEffect(() => {
+    form.reset({
+      petrolPrice: currentPrices.petrolPrice.toString(),
+      dieselPrice: currentPrices.dieselPrice.toString(),
+    });
+  }, [currentPrices]);
   // Handle form submission
   async function onSubmit(values: PriceFormValues) {
     setIsLoading(true);
@@ -66,6 +71,8 @@ export function ManagePricesForm({ currentPrices, onUpdatePrices }: ManagePrices
       setIsLoading(false);
     }
   }
+
+
 
   return (
     <Form {...form}>
